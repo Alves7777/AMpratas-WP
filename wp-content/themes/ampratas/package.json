@@ -1,0 +1,12 @@
+{
+  "name": "ampratas-theme",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./src/app.css -o ./assets/css/app.css --minify",
+    "dev": "tailwindcss -i ./src/app.css -o ./assets/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.5",
+    "tailwindcss": "^4.3.5"
+  }
+}

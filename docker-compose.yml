@@ -1,0 +1,90 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: ampratas-wp-mysql
+    restart: unless-stopped
+    ports:
+      - "3312:3306"
+    environment:
+      MYSQL_DATABASE: ampratas_wp
+      MYSQL_USER: ampratas
+      MYSQL_PASSWORD: ampratas
+      MYSQL_ROOT_PASSWORD: root_ampratas
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_ampratas"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - ampratas_wp
+
+  wordpress:
+    image: wordpress:6.7-php8.2-apache
+    container_name: ampratas-wp
+    restart: unless-stopped
+    ports:
+      - "8091:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ampratas
+      WORDPRESS_DB_PASSWORD: ampratas
+      WORDPRESS_DB_NAME: ampratas_wp
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contato@ampratas.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-AMpratas}
+      MERCADOPAGO_TEST_PAYER_EMAIL: ${MERCADOPAGO_TEST_PAYER_EMAIL:-}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'http://localhost:8091');
+        define('WP_SITEURL', 'http://localhost:8091');
+        define('FS_METHOD', 'direct');
+    volumes:
+      - wp_data:/var/www/html
+      - ./wp-content/themes/ampratas:/var/www/html/wp-content/themes/ampratas
+      - ./scripts:/scripts:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ampratas_wp
+
+  wpcli:
+    image: wordpress:cli-php8.2
+    container_name: ampratas-wpcli
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ampratas
+      WORDPRESS_DB_PASSWORD: ampratas
+      WORDPRESS_DB_NAME: ampratas_wp
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contato@ampratas.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-AMpratas}
+      MERCADOPAGO_TEST_PAYER_EMAIL: ${MERCADOPAGO_TEST_PAYER_EMAIL:-}
+    volumes:
+      - wp_data:/var/www/html
+      - ./wp-content/themes/ampratas:/var/www/html/wp-content/themes/ampratas
+      - ./scripts:/scripts:ro
+    depends_on:
+      wordpress:
+        condition: service_started
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "/scripts/bootstrap.sh"]
+    networks:
+      - ampratas_wp
+
+networks:
+  ampratas_wp:
+    driver: bridge
+
+volumes:
+  db_data:
+  wp_data:
